@@ -16,9 +16,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-
-
-
 AUTH_USER_MODEL = 'accounts.CustomUser'
 
 
@@ -165,6 +162,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 GOOGLE_CLIENT_ID=os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET=os.getenv("GOOGLE_CLIENT_SECRET")
 CUSTOM_PASSWORD_FOR_AUTH=os.getenv('CUSTOM_PASSWORD_FOR_AUTH')
+GOOGLE_OAUTH2_CLIENT_SECRETS_JSON ='C:/Users/h/Desktop/New folder/client_secret_.json'
 
 #mobile_login variables
 SPRING_EDGE_API_KEY=os.getenv('SPRING_EDGE_API_KEY')

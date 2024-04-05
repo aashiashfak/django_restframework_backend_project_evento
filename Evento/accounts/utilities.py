@@ -3,10 +3,11 @@ from google.oauth2 import id_token
 from .models import CustomUser
 from django.contrib.auth import authenticate
 from django.conf import settings
-from rest_framework.exceptions import AuthenticationFailed
-from rest_framework_simplejwt.tokens import RefreshToken, TokenError
-from .manager import CustomUserManager
-from datetime import datetime, timedelta
+from .models import CustomUser, PendingUser
+import random
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+import requests
 
 
 class Google_signin():
@@ -29,15 +30,10 @@ def login_google_user(email, password):
        'refresh_token':str(user_tokens.get('refresh'))
     }
         
-def register_google_user(provider, email,username):
+def register_google_user( email,username):
     user=CustomUser.objects.filter(email=email)
     if user.exists():
-        if provider == user[0].auth_provider:
-            login_google_user(email, settings.CUSTOM_PASSWORD_FOR_AUTH)
-        else: 
-            raise ArithmeticError(
-                detail=f'please continue your login with {user[0].auth_provider}'
-            )
+        login_google_user(email, settings.CUSTOM_PASSWORD_FOR_AUTH)
     else:   
         new_user={
             'email':email,
@@ -45,72 +41,71 @@ def register_google_user(provider, email,username):
             'password':settings.CUSTOM_PASSWORD_FOR_AUTH
         }
         register_user=CustomUser.objects.create_user(**new_user)
-        register_user.auth_provider=provider
         register_user.is_active=True
         register_user.save()
         login_google_user(email, settings.CUSTOM_PASSWORD_FOR_AUTH)
+        
 
 
 
 #phone number login utilities
-from twilio.rest import Client
-from django.conf import settings
-from django.contrib.auth import authenticate
-from .models import CustomUser, PendingUser
-# from datetime import datetime, timedelta
-import random
-from django.core.exceptions import ValidationError
-from django.utils import timezone
-import requests
-
 def generate_otp():
     return ''.join(random.choices('0123456789', k=6))
-def send_otp(phone_number, otp=None):
-    sender_id = settings.SPRING_EDGE_SENDER_ID
-    api_key = settings.SPRING_EDGE_API_KEY
-    
-    # Generate a random 6-digit OTP if not provided
 
-    # Define your message
-    message = f'Your OTP is: {otp}'
-    # Construct the base URL
-    base_url = 'https://instantalerts.co/api/web/send/?apikey=' + api_key
-    # Construct the complete URL with parameters
-    url = base_url + '&sender=' + sender_id + '&to=' + phone_number + '&message=' + message + '&format=json'
-    # Send the HTTP GET request to the Spring Edge API
+def send_otp(phone_number, otp):    
+    message = f'Hello {otp}, This is a test message from spring edge '
+    mobileno= f'91{phone_number}'
+    sender = 'SEDEMO'
+    apikey = '621492a44a89m36c2209zs4l7e74672cj'
+
+    baseurl = 'https://instantalerts.co/api/web/send/?apikey='+apikey
+    url= baseurl+'&sender='+sender+'&to='+mobileno+'&message='+message+'&format=json'
     response = requests.get(url)
-    # Check for HTTP codes other than 200
-    if response.status_code != 200:
-        print('Status:', response, 'Problem with the request.')
-        return False
 
-    # Return True if OTP sent successfully
-    return True
+from django.contrib.auth import get_user_model
+from django.contrib.auth import authenticate
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+from django.conf import settings
 
-def login_or_create_user(phone_number, otp):
+def create_Mobile_user(phone_number, otp):
     try:
         pending_user = PendingUser.objects.get(phone_number=phone_number, otp=otp)
         if pending_user.expiry_time >= timezone.now():
-            # OTP is valid and not expired
-            user = CustomUser.objects.filter(phone_number=phone_number)
+            # Check if the user already exists
+            user = CustomUser.objects.filter(phone_number=phone_number).first()
             if user:
-                user = authenticate(phone_number=phone_number, password=settings.CUSTOM_PASSWORD_FOR_AUTH)
-                if user:
-                    return user
+                return user
             else:
-                new_user={
-                    'phone_number':phone_number,
-                    'password':settings.CUSTOM_PASSWORD_FOR_AUTH
-                }
-                register_user = CustomUser.objects.create_phone_user(**new_user)
-                register_user.set_password(settings.CUSTOM_PASSWORD_FOR_AUTH)
-                register_user.is_active = True
-                register_user.save()
+                # If user doesn't exist, create a new one
+                new_user = CustomUser.objects.create_phone_user(phone_number=phone_number, password=settings.CUSTOM_PASSWORD_FOR_AUTH)
+                new_user.is_active = True
+                new_user.save()
                 return new_user
         else:
-            # OTP has expired
             raise ValidationError("OTP has expired")
     except PendingUser.DoesNotExist:
-        # Invalid OTP
         raise ValidationError("Invalid OTP")
 
+
+
+
+def create_email_user(email, otp):
+    try:
+        pending_user = PendingUser.objects.get(email=email, otp=otp)
+        if pending_user.expiry_time >= timezone.now():
+            # Check if the user already exists
+            user = CustomUser.objects.filter(email=email).first()
+            if user:
+                return user
+            else:
+                # If user doesn't exist, create a new one
+                username = email.split('@')[0] 
+                new_user = CustomUser.objects.create_user(email=email, username=username, password=settings.CUSTOM_PASSWORD_FOR_AUTH)
+                new_user.is_active = True
+                new_user.save()
+                return new_user
+        else:
+            raise ValidationError("OTP has expired")
+    except PendingUser.DoesNotExist:
+        raise ValidationError("Invalid OTP")

@@ -12,10 +12,6 @@ phone_regex = RegexValidator(
 )
  
 
-AUTH_PROVIDER = {
-    'email':'email',
-    'google': 'google'
-}
 
 class CustomUser(AbstractBaseUser,PermissionsMixin):
     # Define model fields
@@ -23,11 +19,9 @@ class CustomUser(AbstractBaseUser,PermissionsMixin):
     email = models.EmailField(max_length=255, unique=True, null=True)
     is_active = models.BooleanField(default=True)
     is_superuser = models.BooleanField(default=False)
-    is_vendor = models.BooleanField(default=False)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     date_joined = models.DateTimeField(auto_now_add=True)
     last_login  = models.DateTimeField(auto_now=True)
-    auth_provider = models.CharField(max_length=10,default=AUTH_PROVIDER.get('email'))
     is_staff = models.BooleanField(default=False) 
    
     USERNAME_FIELD = 'username'
@@ -43,9 +37,10 @@ class CustomUser(AbstractBaseUser,PermissionsMixin):
     
 
 class PendingUser(models.Model):
-    phone_number = models.CharField(max_length=15)
+    phone_number = models.CharField(max_length=15, null=True)
     otp = models.CharField(max_length=6)
     expiry_time = models.DateTimeField()
+    email= models.EmailField(max_length=255, null=True)
 
     
 

@@ -21,9 +21,17 @@ class GoogleSignInSerializer(serializers.Serializer):
 
         email=user_data['email']
         username = email.split('@')[0] 
-        provider='google'
+        return register_google_user(email, username)
 
-        return register_google_user(provider, email, username)
+class EmailOTPRequestSerializer(serializers.Serializer):
+    email=serializers.CharField(max_length=255)
+    class Meta:
+        model = PendingUser
+        fields = [
+            'email',
+            'otp',
+            'expiry_time',
+        ]
 
 class PhoneOTPRequestSerializer(serializers.Serializer):
     phone_number = serializers.CharField()
@@ -45,10 +53,15 @@ class PhoneOTPRequestSerializer(serializers.Serializer):
         return value
         
 class OTPVerificationSerializer(serializers.Serializer):
-    phone_number=serializers.CharField()
     otp = serializers.CharField(max_length=6)
     
 
-    
-         
+class CustomUserEmailSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'username', 'email']
 
+class CustomUserPhoneSerializer(serializers.Serializer):
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'phone_number',]

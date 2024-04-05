@@ -17,6 +17,7 @@ class VendorSerializer(serializers.ModelSerializer):
             'contact_name',
             'email',
             'password',
+            # 'conform password',
             'phone_number',
             'benificiary_name',
             'account_type',
